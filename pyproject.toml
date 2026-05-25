@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "prime_numbers"
+version = "0.0.1"
+authors = [
+    { name="Augustin", email="augustin.sathicq@gmail.com" }
+]
+description = "A package about prime numbers"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independant",
+]
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/prime_numbers"]
+
+[project.urls]
+"Homepage" = "https://github.com.Augustin0716/prime_numbers"
+"Bug Tracker" = "https://github.com.Augustin0716/prime_numbers/issues"
