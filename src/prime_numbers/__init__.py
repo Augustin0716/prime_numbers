@@ -11,12 +11,31 @@ from src.prime_numbers.prime_crible import PrimeCrible
 __all__ = [
     "is_prime",
     "prime_generator",
-    "PrimeCrible"
+    "PrimeCrible",
+    "toggle_load_save_options"
 ]
 
 # -----
 # Package management
 # -----
+
+def get_cache_path() -> Path:
+    if os.name == "nt":
+        base_dir = Path.home() / "AppData" / "Local"
+    else:
+        base_dir = Path.home() / ".local" / "share"
+    cache_dir = base_dir / "py_prime_numbers"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir / "prime_numbers.pkl"
+
+__primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41]
+
+__unordered_primes: set[int] = set()
+
+__save, __load = True, True
+
+__cache_path = get_cache_path()
+
 
 def load_primes() -> None:
     global __load, __primes, __save, __unordered_primes
@@ -28,16 +47,6 @@ def load_primes() -> None:
             __primes = content["ordered_primes"]
             __unordered_primes = set(content["unordered_primes"])
 
-
-def get_cache_path() -> Path:
-    if os.name == "nt":
-        base_dir = Path.home() / "AppData" / "Local"
-    else:
-        base_dir = Path.home() / ".local" / "share"
-    cache_dir = base_dir / "py_prime_numbers"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    return cache_dir / "prime_numbers.pkl"
-
 def save_primes() -> None:
     content: dict = {
         "save": __save,
@@ -48,24 +57,40 @@ def save_primes() -> None:
     with open(__cache_path, "wb") as f:
         dump(content, f, HIGHEST_PROTOCOL)
 
-__primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41]
 
-__unordered_primes: set[int] = set()
+def toggle_load_save_options(mode: Literal["so", "lo", "snl", "n"]) -> None:
+    """
+    Allows user to choose either the package should:
 
-__save, __load = True, True
+    - load variables from save
+    - save generated prime numbers from this session (to be loaded the next one)
 
-__cache_path = get_cache_path()
+    In all case, the cache is necessary and will be used.
+    :param mode: either so (Save Only), lo (Load Only), snl (Save aNd Load) or n (None)
+    :return: Nothing, but works, I swear
+    """
+    global __load, __save
+    s = mode in ("so", "snl")
+    l = mode in ("lo", "snl")
+    if s ^ __save:
+        __save = s
+        if s:
+            register(save_primes)
+        else:
+            unregister(save_primes)
+    if l ^ __load:
+        __load = l
+
 
 if __cache_path.exists():
     load_primes()
 else:
     print(
-        "Thanks for using my package !\n"
+        "Hello, thanks for using my package !\n"
         "Please not that for efficiency reasons, this package creates a small (yet useful !) save in your computer: ",
         str(__cache_path),
         "\nYou can disable this using this package 'toggle_load_save_options' function."
     ) # Welcome text
-
 if __save:
     register(save_primes)
 
@@ -159,35 +184,9 @@ def prime_generator(n_primes: int = float("inf")) -> Generator[int, None, None]:
 
     candidate: int = __primes[-1]
     while dispensed < n_primes:
-        candidate += 2
-        if candidate in __unordered_primes:
-            __primes.append(candidate)
-            yield candidate
-        if is_prime(candidate):
+        candidate += 2 # skipping even numbers
+        if candidate in __unordered_primes or is_prime(candidate):
             dispensed += 1
-            __primes.append(candidate)
+            __unordered_primes.remove(candidate) # always in this cache at that point
+            __primes.append(candidate) # we know for sure it's the next prime after __primes[-1]
             yield candidate
-
-
-def toggle_load_save_options(mode: Literal["so", "lo", "snl", "n"]) -> None:
-    global __load, __save
-    s = mode in ("so", "snl")
-    l = mode in ("lo", "snl")
-    if s ^ __save:
-        __save = s
-        if s:
-            register(save_primes)
-        else:
-            unregister(save_primes)
-    if l ^ __load:
-        __load = l
-
-
-if __name__ == '__main__':
-    print(__cache_path)
-    number: int = 0
-    gen = prime_generator()
-    print(type(gen))
-    while number < 500:
-        number = next(gen)
-        print(number)
