@@ -29,7 +29,7 @@ class PrimeCribleBase(ABC, PrimeAttributes):
         Return a string representing the crible, such as str[n] = "P" if n is prime and "C" if composite
         For instance, str(PrimeCrible(10)) returns 'CCPPCPCPCC'
         """
-        return self._crible.tobytes().decode("ascii")
+        return self._crible.tobytes().decode()
 
     def __bytes__(self) -> bytes:
         """
@@ -85,6 +85,14 @@ class PrimeCribleBase(ABC, PrimeAttributes):
         else:
             return NotImplemented
 
+    @property
+    def primes(self):
+        return self._n_primes
+
+    @property
+    def composites(self):
+        return self._n_composites
+
 
 class PrimeCrible(PrimeCribleBase):
     """
@@ -102,10 +110,10 @@ class PrimeCrible(PrimeCribleBase):
         self._crible = array('B', [P] * n)
         self._crible[0] = self._crible[1] = C
 
-        self._n_primes: None | int = None
-        self._n_composites: None | int = None
-
         self._sift()
+
+        self._n_composites = self._crible.count(C)
+        self._n_primes = self._crible.count(P)
 
     def _sift(self):
         """
@@ -154,20 +162,6 @@ class PrimeCrible(PrimeCribleBase):
         for number, is_prime in enumerate(self._crible):
             yield number, is_prime == P
 
-    @property
-    def composites(self) -> int:
-        """Returns the number of composites from 0 to n"""
-        if self._n_composites is None:
-            self._n_composites = self._crible.count(C)
-        return self._n_composites
-
-    @property
-    def primes(self) -> int:
-        """Returns the number of primes from 0 to n"""
-        if self._n_primes is None:
-            self._n_primes = self._crible.count(P)
-        return self._n_primes
-
 
 class PrimeCribleSlice(PrimeCribleBase):
     def __init__(self, crible: array, number_range: slice):
@@ -179,20 +173,8 @@ class PrimeCribleSlice(PrimeCribleBase):
         ) # a completely defined slice is needed for later
         self._numbers: range = range(self._slice.start, self._slice.stop, self._slice.step)
 
-        self._n_primes: None | int = None
-        self._n_composites: None | int = None
-
-    @property
-    def composites(self) -> int:
-        if self._n_composites is None:
-            self._n_composites = self._crible[self._slice].count(C)
-        return self._n_composites
-
-    @property
-    def primes(self) -> int:
-        if self._n_primes is None:
-            self._n_primes = self._crible[self._slice].count(P)
-        return self._n_primes
+        self._n_primes = self._crible[self._slice].count(P)
+        self._n_composites = self._crible[self._slice].count(C)
 
     @property
     def slice_(self):
@@ -205,10 +187,13 @@ class PrimeCribleSlice(PrimeCribleBase):
         return f"PrimeCribleSlice[{self._slice.start}:{self._slice.stop}:{self._slice.step}]"
 
     def __str__(self):
-        return self._crible[self._slice].tobytes().decode("ascii")
+        return self._crible[self._slice].tobytes().decode()
 
     def __bytes__(self) -> bytes:
         return self._crible[self._slice].tobytes()
+
+    def __bool__(self):
+        return len(self._crible[self._slice]) > 0
 
     def __iter__(self) -> Generator[tuple[int, bool], None, None]:
         for number in self._numbers:
