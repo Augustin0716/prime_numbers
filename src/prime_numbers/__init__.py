@@ -1,16 +1,77 @@
+from atexit import register, unregister
 from collections.abc import Generator
+import os
+from pathlib import Path
+from pickle import load, dump, HIGHEST_PROTOCOL
+from typing import Literal
 
-from .prime_crible import PrimeCrible
+from src.prime_numbers.prime_crible import PrimeCrible
 
-__all_ = [
+
+__all__ = [
     "is_prime",
     "prime_generator",
     "PrimeCrible"
 ]
 
+# -----
+# Package management
+# -----
+
+def load_primes() -> None:
+    global __load, __primes, __save, __unordered_primes
+    with open(__cache_path, "rb") as f:
+        content: dict = load(f)
+        __load = content["load"]
+        __save = content["save"]
+        if __load:
+            __primes = content["ordered_primes"]
+            __unordered_primes = set(content["unordered_primes"])
+
+
+def get_cache_path() -> Path:
+    if os.name == "nt":
+        base_dir = Path.home() / "AppData" / "Local"
+    else:
+        base_dir = Path.home() / ".local" / "share"
+    cache_dir = base_dir / "py_prime_numbers"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir / "prime_numbers.pkl"
+
+def save_primes() -> None:
+    content: dict = {
+        "save": __save,
+        "load": __load,
+        "ordered_primes": __primes,
+        "unordered_primes": list(__unordered_primes)
+    }
+    with open(__cache_path, "wb") as f:
+        dump(content, f, HIGHEST_PROTOCOL)
+
 __primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41]
 
 __unordered_primes: set[int] = set()
+
+__save, __load = True, True
+
+__cache_path = get_cache_path()
+
+if __cache_path.exists():
+    load_primes()
+else:
+    print(
+        "Thanks for using my package !\n"
+        "Please not that for efficiency reasons, this package creates a small (yet useful !) save in your computer: ",
+        str(__cache_path),
+        "\nYou can disable this using this package 'toggle_load_save_options' function."
+    ) # Welcome text
+
+if __save:
+    register(save_primes)
+
+# -----
+# Package functions
+# -----
 
 bases_to_add: dict[int, int | list[int]] = {
     2047: 2,
@@ -31,9 +92,12 @@ def is_prime(n: int) -> bool:
     Checks whether a number is prime, using Miller-Rabin algorithm.
     It is deterministic if n < 3317044064679887385961981. Above this threshold, there is a small chance for error.
     The least chance for error, the more time it needs to answer.
+
+    Time complexity: O(log(n)log(log(n))), O(1) if n has already been checked.
     :param n: number which is to be checked
     :return: True if n is prime, False otherwise
     """
+    # fast checks
     if n in __primes:
         return True
     elif n in __unordered_primes:
@@ -43,6 +107,7 @@ def is_prime(n: int) -> bool:
     elif n < __primes[-1]:
         return False
 
+    # Miller-Rabin algorithm
     d = n - 1
     s = 0
     while d % 2 == 0:
@@ -54,11 +119,11 @@ def is_prime(n: int) -> bool:
     for limit, base in bases_to_add.items():
         if isinstance(base, int):
             bases.append(base)
-        else:
+        else: # list, so we concatenate
             bases += base
         if n <= limit:
             break
-    else:
+    else: # TODO: check the number of prime needed
         print(f"Warning, the test is not deterministic for {n = }")
 
     for a in bases:
@@ -73,7 +138,7 @@ def is_prime(n: int) -> bool:
         else:
             return False
 
-    __unordered_primes.add(n)
+    __unordered_primes.add(n) # cache the number to avoid rerunning calculations
     return True
 
 
@@ -104,7 +169,22 @@ def prime_generator(n_primes: int = float("inf")) -> Generator[int, None, None]:
             yield candidate
 
 
+def toggle_load_save_options(mode: Literal["so", "lo", "snl", "n"]) -> None:
+    global __load, __save
+    s = mode in ("so", "snl")
+    l = mode in ("lo", "snl")
+    if s ^ __save:
+        __save = s
+        if s:
+            register(save_primes)
+        else:
+            unregister(save_primes)
+    if l ^ __load:
+        __load = l
+
+
 if __name__ == '__main__':
+    print(__cache_path)
     number: int = 0
     gen = prime_generator()
     print(type(gen))
