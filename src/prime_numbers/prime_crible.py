@@ -1,19 +1,92 @@
+from abc import ABC
 from array import array
 from collections.abc import Generator
+from numbers import Real
 from math import isqrt
-from typing import Union, runtime_checkable, Protocol
+from typing import runtime_checkable, Protocol
 
 C = 67 # composite
 P = 80 # prime
 
-Numbers = Union[int, float]
 
 @runtime_checkable
 class SupportsPrime(Protocol):
     primes: int
 
 
-class PrimeCrible:
+class PrimeAttributes(Protocol):
+    _crible: array
+    _n_primes: None | int
+    _n_composites: None | int
+
+
+class PrimeCribleBase(ABC, PrimeAttributes):
+    """
+    Abstract base class for PrimeCrible and PrimeCribleSlice. Regroups dunders and methods that are common to both class.
+    """
+    def __str__(self) -> str:
+        """
+        Return a string representing the crible, such as str[n] = "P" if n is prime and "C" if composite
+        For instance, str(PrimeCrible(10)) returns 'CCPPCPCPCC'
+        """
+        return self._crible.tobytes().decode("ascii")
+
+    def __bytes__(self) -> bytes:
+        """
+        Return a byte array representing the crible, such as bytes[n] = b'P' if n is prime and b'C' if composite.
+        For instance, bytes(PrimeCrible(10)) return b'CCPPCPCPCC'
+        """
+        return self._crible.tobytes()
+
+    def __bool__(self) -> bool:
+        return len(self._crible) > 0
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, (PrimeCribleSlice, PrimeCrible)):
+            return NotImplemented
+        else:
+            return str(self) == str(other)
+
+    def __ne__(self, other: object) -> bool:
+        if not isinstance(other, (PrimeCribleSlice, PrimeCrible)):
+            return NotImplemented
+        else:
+            return str(self) != str(other)
+
+    def __lt__(self, other: object) -> bool:
+        if isinstance(other, Real):
+            return self._n_primes < float(other)
+        elif isinstance(other, SupportsPrime):
+            return self._n_primes < other.primes
+        else:
+            return NotImplemented
+
+    def __le__(self, other: object):
+        if isinstance(other, Real):
+            return self._n_primes <= float(other)
+        elif isinstance(other, SupportsPrime):
+            return self._n_primes <= other.primes
+        else:
+            return NotImplemented
+
+    def __gt__(self, other: object) -> bool:
+        if isinstance(other, Real):
+            return self._n_primes > other
+        elif isinstance(other, SupportsPrime):
+            return self._n_primes > other.primes
+        else:
+            return NotImplemented
+
+    def __ge__(self, other: object) -> bool:
+        if isinstance(other, Real):
+            return self._n_primes >= other
+        elif isinstance(other, SupportsPrime):
+            return self._n_primes >= other.primes
+        else:
+            return NotImplemented
+
+
+class PrimeCrible(PrimeCribleBase):
     """
     A class whose objects are Eratosthenes's crible.
 
@@ -53,16 +126,6 @@ class PrimeCrible:
     def __repr__(self):
         return f"PrimeCrible(n={self.n})"
 
-    def __str__(self):
-        """
-        Return a string representing the crible, such as str[n] = "P" if n is prime and "C" if composite
-        For instance, str(PrimeCrible(10)) returns 'CCPPCPCPCC'
-        """
-        return self._crible.tobytes().decode("ascii")
-
-    def __len__(self):
-        return self.n
-
     def __contains__(self, item: int):
         if not isinstance(item, int):
             return False
@@ -70,7 +133,6 @@ class PrimeCrible:
             return True
         else:
             return False
-
 
     def __getitem__(self, n):
         if isinstance(n, int):
@@ -92,76 +154,29 @@ class PrimeCrible:
         for number, is_prime in enumerate(self._crible):
             yield number, is_prime == P
 
-    def __bool__(self) -> bool:
-        return self.n > 0
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, (PrimeCribleSlice, PrimeCrible)):
-            return NotImplemented
-        else:
-            return str(self) == str(other)
-
-    def __ne__(self, other: object) -> bool:
-        if not isinstance(other, (PrimeCribleSlice, PrimeCrible)):
-            return NotImplemented
-        else:
-            return str(self) != str(other)
-
-    def __lt__(self, other: object) -> bool:
-        if isinstance(other, Numbers):
-            return self._n_primes < other
-        elif isinstance(other, SupportsPrime):
-            return self._n_primes < other.primes
-        else:
-            return NotImplemented
-
-    def __le__(self, other: object):
-        if isinstance(other, Numbers):
-            return self._n_primes <= other
-        elif isinstance(other, SupportsPrime):
-            return self._n_primes <= other.primes
-        else:
-            return NotImplemented
-
-    def __gt__(self, other: object) -> bool:
-        if isinstance(other, Numbers):
-            return self._n_primes > other
-        elif isinstance(other, SupportsPrime):
-            return self._n_primes > other.primes
-        else:
-            return NotImplemented
-
-    def __ge__(self, other: object) -> bool:
-        if isinstance(other, Numbers):
-            return self._n_primes >= other
-        elif isinstance(other, SupportsPrime):
-            return self._n_primes >= other.primes
-        else:
-            return NotImplemented
-
     @property
-    def composites(self):
+    def composites(self) -> int:
         """Returns the number of composites from 0 to n"""
         if self._n_composites is None:
             self._n_composites = self._crible.count(C)
         return self._n_composites
 
     @property
-    def primes(self):
+    def primes(self) -> int:
         """Returns the number of primes from 0 to n"""
         if self._n_primes is None:
             self._n_primes = self._crible.count(P)
         return self._n_primes
 
 
-class PrimeCribleSlice:
+class PrimeCribleSlice(PrimeCribleBase):
     def __init__(self, crible: array, number_range: slice):
         self._crible = crible
         self._slice = slice(
             number_range.start if number_range.start is not None else 0,
             number_range.stop if number_range.stop is not None else len(self._crible),
             number_range.step if number_range.step is not None else 1
-        )
+        ) # a completely defined slice is needed for later
         self._numbers: range = range(self._slice.start, self._slice.stop, self._slice.step)
 
         self._n_primes: None | int = None
@@ -179,6 +194,10 @@ class PrimeCribleSlice:
             self._n_primes = self._crible[self._slice].count(P)
         return self._n_primes
 
+    @property
+    def slice_(self):
+        return self._slice
+
     def __len__(self) -> int:
         return len(self._numbers)
 
@@ -188,9 +207,12 @@ class PrimeCribleSlice:
     def __str__(self):
         return self._crible[self._slice].tobytes().decode("ascii")
 
+    def __bytes__(self) -> bytes:
+        return self._crible[self._slice].tobytes()
+
     def __iter__(self) -> Generator[tuple[int, bool], None, None]:
-        for number, is_prime in zip(self._numbers, self._crible[self._slice]):
-            yield number, is_prime == P
+        for number in self._numbers:
+            yield number, self._crible[number] == P
 
     def __getitem__(self, n: int | slice):
         if isinstance(n, int):
