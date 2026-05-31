@@ -23,6 +23,7 @@ if __name__ == '__main__':
     # str() test for both PrimeCrible and PrimeCribleSlice
     # ---
     cs2 = c[1::2] # PrimeSlice from 1 to 50, with a step of 2
+    print(cs1 < cs2)
     print(str(c))
     print("." * 25 + str(cs1))
     print("." + ".".join(str(cs2)))
