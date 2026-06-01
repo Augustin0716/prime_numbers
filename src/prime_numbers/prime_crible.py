@@ -7,45 +7,26 @@ from typing import runtime_checkable, Protocol
 
 C = 67 # composite
 P = 80 # prime
-
+# both variables are ASCII code, it is useful to represent primes and composites in __str__ and __bytes__
 
 @runtime_checkable
 class SupportsPrime(Protocol):
     primes: int
 
 
-class PrimeAttributes(Protocol):
-    _crible: array
-    _n_primes: None | int
-    _n_composites: None | int
-
-
-class PrimeCribleBase(ABC, PrimeAttributes):
+class PrimeCribleBase(ABC):
     """
     Abstract base class for PrimeCrible and PrimeCribleSlice. Regroups dunders and methods that are common to both class.
     """
-    def __str__(self) -> str:
-        """
-        Return a string representing the crible, such as str[n] = "P" if n is prime and "C" if composite
-        For instance, str(PrimeCrible(10)) returns 'CCPPCPCPCC'
-        """
-        return self._crible.tobytes().decode()
-
-    def __bytes__(self) -> bytes:
-        """
-        Return a byte array representing the crible, such as bytes[n] = b'P' if n is prime and b'C' if composite.
-        For instance, bytes(PrimeCrible(10)) return b'CCPPCPCPCC'
-        """
-        return self._crible.tobytes()
-
-    def __bool__(self) -> bool:
-        return len(self._crible) > 0
+    _crible: array
+    _n_primes: None | int
+    _n_composites: None | int
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, (PrimeCribleSlice, PrimeCrible)):
             return NotImplemented
         else:
-            return str(self) == str(other)
+            return str(self) == str(other) # TODO: find a more robust identity
 
     def __ne__(self, other: object) -> bool:
         if not isinstance(other, (PrimeCribleSlice, PrimeCrible)):
@@ -134,6 +115,23 @@ class PrimeCrible(PrimeCribleBase):
     def __repr__(self):
         return f"PrimeCrible(n={self.n})"
 
+    def __str__(self) -> str:
+        """
+        Return a string representing the crible, such as str[n] = "P" if n is prime and "C" if composite
+        For instance, str(PrimeCrible(10)) returns 'CCPPCPCPCC'
+        """
+        return self._crible.tobytes().decode()
+
+    def __bytes__(self) -> bytes:
+        """
+        Return a byte array representing the crible, such as bytes[n] = b'P' if n is prime and b'C' if composite.
+        For instance, bytes(PrimeCrible(10)) return b'CCPPCPCPCC'
+        """
+        return self._crible.tobytes()
+
+    def __bool__(self) -> bool:
+        return len(self._crible) > 0
+
     def __contains__(self, item: int):
         if not isinstance(item, int):
             return False
@@ -176,10 +174,6 @@ class PrimeCribleSlice(PrimeCribleBase):
         self._n_primes = self._crible[self._slice].count(P)
         self._n_composites = self._crible[self._slice].count(C)
 
-    @property
-    def slice_(self):
-        return self._slice
-
     def __len__(self) -> int:
         return len(self._numbers)
 
@@ -204,8 +198,12 @@ class PrimeCribleSlice(PrimeCribleBase):
             index: int = self._numbers[n] # real index
             return self._crible[index] == P
         elif isinstance(n, slice):
-            r: range = self._numbers[n]
+            r: range = self._numbers[n] # using the slice on the range _numbers allows us to get the "real" slice
             s = slice(r.start, r.stop, r.step)
             return PrimeCribleSlice(self._crible, s)
         else:
             raise TypeError(f"Type {type(n).__name__} is not supported")
+
+    @property
+    def slice_(self):
+        return self._slice
