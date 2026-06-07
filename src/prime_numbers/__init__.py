@@ -5,13 +5,13 @@ from pathlib import Path
 from pickle import load, dump, HIGHEST_PROTOCOL
 from typing import Literal
 
-from src.prime_numbers.prime_crible import PrimeCrible
+from src.prime_numbers.prime_sieve import PrimeSieve
 
 
 __all__ = [
     "is_prime",
     "prime_generator",
-    "PrimeCrible",
+    "PrimeSieve",
     "toggle_load_save_options"
 ]
 
@@ -28,7 +28,7 @@ def get_cache_path() -> Path:
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir / "prime_numbers.pkl"
 
-__primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41]
+__primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 
 __unordered_primes: set[int] = set()
 
@@ -58,6 +58,19 @@ def save_primes() -> None:
         dump(content, f, HIGHEST_PROTOCOL)
 
 
+if __cache_path.exists():
+    load_primes()
+else:
+    print(
+        "Hello, thanks for using my package !\n"
+        "Please not that for efficiency reasons, this package creates a small (yet useful !) save in your computer: ",
+        str(__cache_path),
+        "\nYou can disable this using this package 'toggle_load_save_options' function."
+    ) # Welcome text
+if __save:
+    register(save_primes)
+
+
 def toggle_load_save_options(mode: Literal["so", "lo", "snl", "n"]) -> None:
     """
     Allows user to choose either the package should:
@@ -70,8 +83,8 @@ def toggle_load_save_options(mode: Literal["so", "lo", "snl", "n"]) -> None:
     :return: Nothing, but works, I swear
     """
     global __load, __save
-    s = mode in ("so", "snl")
-    l = mode in ("lo", "snl")
+    s = "s" in mode
+    l = "l" in mode
     if s ^ __save:
         __save = s
         if s:
@@ -81,18 +94,6 @@ def toggle_load_save_options(mode: Literal["so", "lo", "snl", "n"]) -> None:
     if l ^ __load:
         __load = l
 
-
-if __cache_path.exists():
-    load_primes()
-else:
-    print(
-        "Hello, thanks for using my package !\n"
-        "Please not that for efficiency reasons, this package creates a small (yet useful !) save in your computer: ",
-        str(__cache_path),
-        "\nYou can disable this using this package 'toggle_load_save_options' function."
-    ) # Welcome text
-if __save:
-    register(save_primes)
 
 # -----
 # Package functions
@@ -108,7 +109,8 @@ bases_to_add: dict[int, int | list[int]] = {
     341_550_071_728_321: 17,
     3_825_123_056_546_413_051: [19, 23],
     318_665_857_834_031_151_167_461: [29, 31, 37],
-    3_317_044_064_679_887_385_961_981: 41
+    3_317_044_064_679_887_385_961_981: 41,
+    1_543_267_864_443_420_616_877_677_640_751_301: [43, 47, 53, 59, 61]
 }
 
 
