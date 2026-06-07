@@ -8,28 +8,29 @@ from typing import runtime_checkable, Protocol
 C = 67 # composite
 P = 80 # prime
 # both variables are ASCII code, it is useful to represent primes and composites in __str__ and __bytes__
+# Also makes good beacons in the code without verbose
 
 @runtime_checkable
 class SupportsPrime(Protocol):
     primes: int
 
 
-class PrimeCribleBase(ABC):
+class PrimeSieveBase(ABC):
     """
-    Abstract base class for PrimeCrible and PrimeCribleSlice. Regroups dunders and methods that are common to both class.
+    Abstract base class for PrimeSieve and PrimeSieveSlice. Regroups dunders and methods that are common to both class.
     """
-    _crible: array
+    _sieve: array
     _n_primes: None | int
     _n_composites: None | int
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, (PrimeCribleSlice, PrimeCrible)):
+        if not isinstance(other, PrimeSieveBase):
             return NotImplemented
         else:
             return str(self) == str(other) # TODO: find a more robust identity
 
     def __ne__(self, other: object) -> bool:
-        if not isinstance(other, (PrimeCribleSlice, PrimeCrible)):
+        if not isinstance(other, (PrimeSieveSlice, PrimeSieve)):
             return NotImplemented
         else:
             return str(self) != str(other)
@@ -75,81 +76,84 @@ class PrimeCribleBase(ABC):
         return self._n_composites
 
 
-class PrimeCrible(PrimeCribleBase):
+class PrimeSieve(PrimeSieveBase):
     """
-    A class whose objects are Eratosthenes's crible.
+    A class whose objects are Eratosthenes's sieve.
 
     Can:
 
     - return the number of primes from 0 to n (0 included, n excluded)
     - return the number of composite from 0 to n
     - return whether a number within its range is prime (True) or composite (False)
-    - return a slice (PrimeCribleSlice object) with the same properties
+    - return a slice (PrimeSieveSlice object) with the same properties
     """
     def __init__(self, n: int) -> None:
         self.n = n
-        self._crible = array('B', [P] * n)
-        self._crible[0] = self._crible[1] = C
+        self._sieve = array('B', [P] * n)
+        self._sieve[0] = self._sieve[1] = C
 
         self._sift()
 
-        self._n_composites = self._crible.count(C)
-        self._n_primes = self._crible.count(P)
+        self._n_composites = self._sieve.count(C)
+        self._n_primes = self._sieve.count(P)
 
     def _sift(self):
         """
         Executes order 66.
-        Just kidding, executes Eratosthenes's algorithm on _crible.
+        Just kidding, executes Eratosthenes's algorithm on _sieve.
         """
         limit = isqrt(self.n) + 1
 
-        self._crible[4::2] = array('B', [C] * len(self._crible[4::2]))
+        self._sieve[4::2] = array('B', [C] * len(self._sieve[4::2]))
 
         for i in range(3, limit + 1, 2):
-            if self._crible[i] == P:
+            if self._sieve[i] == P:
                 b = i*i
                 s = 2*i
-                l: int = len(self._crible[b::s])
-                self._crible[b::s] = array('B', [C] * l)
+                l: int = len(self._sieve[b::s])
+                self._sieve[b::s] = array('B', [C] * l)
 
     def __repr__(self):
-        return f"PrimeCrible(n={self.n})"
+        return f"PrimeSieve(n={self.n})"
 
     def __str__(self) -> str:
         """
-        Return a string representing the crible, such as str[n] = "P" if n is prime and "C" if composite
-        For instance, str(PrimeCrible(10)) returns 'CCPPCPCPCC'
+        Return a string representing the sieve, such as str[n] = "P" if n is prime and "C" if composite
+        For instance, str(PrimeSieve(10)) returns 'CCPPCPCPCC'
         """
-        return self._crible.tobytes().decode()
+        return self._sieve.tobytes().decode()
 
     def __bytes__(self) -> bytes:
         """
-        Return a byte array representing the crible, such as bytes[n] = b'P' if n is prime and b'C' if composite.
-        For instance, bytes(PrimeCrible(10)) return b'CCPPCPCPCC'
+        Return a byte array representing the sieve, such as bytes[n] = b'P' if n is prime and b'C' if composite.
+        For instance, bytes(PrimeSieve(10)) return b'CCPPCPCPCC'
         """
-        return self._crible.tobytes()
+        return self._sieve.tobytes()
 
     def __bool__(self) -> bool:
-        return len(self._crible) > 0
+        return len(self._sieve) > 0
 
-    def __contains__(self, item: int):
-        if not isinstance(item, int):
+    def __len__(self):
+        return len(self._sieve)
+
+    def __contains__(self, key: int):
+        if not isinstance(key, int):
             return False
-        elif 0 <= item < len(self._crible):
+        elif 0 <= key < len(self._sieve):
             return True
         else:
             return False
 
-    def __getitem__(self, n):
-        if isinstance(n, int):
-            return self._crible[n] == P
-        elif isinstance(n, slice):
-            if self._crible[n] == self._crible:
+    def __getitem__(self, i):
+        if isinstance(i, int):
+            return self._sieve[i] == P
+        elif isinstance(i, slice):
+            if self._sieve[i] == self._sieve:
                 return self
             else:
-                return PrimeCribleSlice(self._crible, n)
+                return PrimeSieveSlice(self._sieve, i)
         else:
-            raise TypeError(f"Type {type(n).__name__} is not supported")
+            raise TypeError(f"Type {type(i).__name__} is not supported")
 
     def __iter__(self) -> Generator[tuple[int, bool], None, None]:
         """
@@ -157,53 +161,62 @@ class PrimeCrible(PrimeCribleBase):
         For instance: (0, False), (1, False), (2, True), ..., (n-1, primality(n-1))
         :return: a Generator yielding a number and its primality as a boolean
         """
-        for number, is_prime in enumerate(self._crible):
+        for number, is_prime in enumerate(self._sieve):
             yield number, is_prime == P
 
 
-class PrimeCribleSlice(PrimeCribleBase):
-    def __init__(self, crible: array, number_range: slice):
-        self._crible = crible
+class PrimeSieveSlice(PrimeSieveBase):
+    def __init__(self, sieve: array, number_range: slice):
+        self._sieve = sieve # it gets the whole object (as a shallow copy, no data created here)
         self._slice = slice(
             number_range.start if number_range.start is not None else 0,
-            number_range.stop if number_range.stop is not None else len(self._crible),
+            number_range.stop if number_range.stop is not None else len(self._sieve),
             number_range.step if number_range.step is not None else 1
         ) # a completely defined slice is needed for later
+        # TODO: is slice really needed ?
         self._numbers: range = range(self._slice.start, self._slice.stop, self._slice.step)
 
-        self._n_primes = self._crible[self._slice].count(P)
-        self._n_composites = self._crible[self._slice].count(C)
+        self._n_primes = self._sieve[self._slice].count(P)
+        self._n_composites = len(self._numbers) - self._n_primes # not slicing _sieve twice
+
+    def __repr__(self):
+        return f"PrimeSieveSlice[{self._slice.start}:{self._slice.stop}:{self._slice.step}]"
+
+    def __str__(self):
+        return self._sieve[self._slice].tobytes().decode()
+
+    def __bytes__(self) -> bytes:
+        return self._sieve[self._slice].tobytes()
+
+    def __bool__(self):
+        return len(self._sieve[self._slice]) > 0
 
     def __len__(self) -> int:
         return len(self._numbers)
 
-    def __repr__(self):
-        return f"PrimeCribleSlice[{self._slice.start}:{self._slice.stop}:{self._slice.step}]"
+    def __contains__(self, key):
+        if not isinstance(key, int):
+            return False
+        else:
+            return key in self._numbers
 
-    def __str__(self):
-        return self._crible[self._slice].tobytes().decode()
-
-    def __bytes__(self) -> bytes:
-        return self._crible[self._slice].tobytes()
-
-    def __bool__(self):
-        return len(self._crible[self._slice]) > 0
+    def __getitem__(self, i: int | slice):
+        if isinstance(i, int):
+            index: int = self._numbers[i] # real index
+            return self._sieve[index] == P
+        elif isinstance(i, slice):
+            # using the slice on the range _numbers allows us to get the "real" slice
+            if (r := self._numbers[i]) == self._numbers:
+                return self
+            s = slice(r.start, r.stop, r.step)
+            return PrimeSieveSlice(self._sieve, s)
+        else:
+            raise TypeError(f"Type {type(i).__name__} is not supported")
 
     def __iter__(self) -> Generator[tuple[int, bool], None, None]:
         for number in self._numbers:
-            yield number, self._crible[number] == P
-
-    def __getitem__(self, n: int | slice):
-        if isinstance(n, int):
-            index: int = self._numbers[n] # real index
-            return self._crible[index] == P
-        elif isinstance(n, slice):
-            r: range = self._numbers[n] # using the slice on the range _numbers allows us to get the "real" slice
-            s = slice(r.start, r.stop, r.step)
-            return PrimeCribleSlice(self._crible, s)
-        else:
-            raise TypeError(f"Type {type(n).__name__} is not supported")
+            yield number, self._sieve[number] == P
 
     @property
-    def slice_(self):
+    def slice_(self) -> slice:
         return self._slice
