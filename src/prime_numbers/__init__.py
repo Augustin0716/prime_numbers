@@ -182,6 +182,7 @@ def prime_generator(n_primes: int = float("inf")) -> Generator[int, None, None]:
         if dispensed > n_primes:
             return
         else:
+            dispensed += 1
             yield p
 
     candidate: int = __primes[-1]
