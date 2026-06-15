@@ -1,44 +1,54 @@
-from itertools import accumulate
 import matplotlib.pyplot as plt
-from time import time_ns, time
+from time import time_ns
 
-from src.prime_numbers import *
-
-def timeit(f):
-    def timed(*args, **kw):
-        ts = time_ns()
-        result = f(*args, **kw)
-        te = time_ns()
-        return result
-    return timed
+from src.prime_numbers import prime_generator
 
 if __name__ == "__main__":
-    n_primes: list[int] = [10**i for i in range(2,5)]
-    cal_time: list[int] = [0]*(l := len(n_primes))
-    redo_time: list[int] = [0]*l
-    c = []
-    for i, n in enumerate(n_primes):
+    # Testing for 10^n, 2.10^n and 5.10^n with n in {1, 2, 3, 4, 5}
+    n_primes: list[int] = [j * 10 ** i for i in range(1, 5) for j in (1, 2, 5)]
+
+    cal_time: list[float] = []  # First calculation
+    redo_time: list[float] = []  # Cache reading
+
+    for n in n_primes:
+        # 1. First measure with calculation
         begin = time_ns()
         for j in prime_generator(n):
             pass
         end = time_ns()
-        cal_time[i] = end - begin
-        for j in [0, 1, 2]:
+        # ms conversion
+        cal_time.append((end - begin) / 1_000_000)
+
+        # 2. Following measures for reading time
+        temp_redo = []
+        for _ in range(3):  # 3 essais pour faire une moyenne propre
             begin = time_ns()
             for k in prime_generator(n):
                 pass
             end = time_ns()
-            redo_time[j] = end - begin
-    cal_time = list(accumulate(cal_time))
+            temp_redo.append((end - begin) / 1_000_000)
 
-    print(cal_time)
-    print(redo_time)
+        # Average for better precision
+        redo_time.append(sum(temp_redo) / len(temp_redo))
+        print(f"Time for {n=} primes calculated")
 
-    plt.plot(n_primes,cal_time, 'r.', n_primes,redo_time, 'b.')
+    # Result in the terminal
+    print(f"{'N':<10} | {'Calculation time (ms)':<20} | {'Cache Reading time (ms)':<20}")
+    print("-" * 58)
+    for i, n in enumerate(n_primes):
+        print(f"{n:<10} | {cal_time[i]:<20.4f} | {redo_time[i]:<20.4f}")
+
+    # MatPlotLib plot
+    plt.figure(figsize=(10, 6))
+
+    plt.plot(n_primes, cal_time, label="First run (Generation)", marker='o', color='red', linewidth=2)
+    plt.plot(n_primes, redo_time, label="Following run (Cache pkl)", marker='s', color='green', linewidth=2)
+
     plt.xscale('log')
-    plt.yscale('log')
-    plt.ylabel('Time (ns)')
-    plt.xlabel('number of primes (log)')
-    plt.legend()
-    plt.title("Time taken to calculate prime numbers")
+    plt.xlabel("Number of primes (n)", fontsize=12)
+    plt.ylabel("Run time (milliseconds)", fontsize=12)
+    plt.title("Time taken to generate or read n primes", fontsize=14, fontweight='bold')
+    plt.grid(True, which="both", linestyle="--", alpha=0.5)
+    plt.legend(fontsize=11)
+
     plt.show()
