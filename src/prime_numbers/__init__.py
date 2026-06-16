@@ -28,6 +28,7 @@ def get_cache_path() -> Path:
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir / "prime_numbers.pkl"
 
+
 __primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61]
 
 __unordered_primes: set[int] = set()
