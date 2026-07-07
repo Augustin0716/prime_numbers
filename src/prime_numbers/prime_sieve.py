@@ -80,7 +80,14 @@ class PrimeSieve(PrimeSieveBase):
     def __init__(self, n: int) -> None:
         self.n = n
         self._sieve = array('B', [P] * n)
-        self._sieve[0] = self._sieve[1] = C
+        if len(self._sieve) < 2:
+            self._n_primes = 0
+            if len(self._sieve) == 0:
+                self._n_composites = 0
+                return
+            self._sieve[0] = C
+            self._n_composites = 1
+            return
 
         self._sift()
 
@@ -138,7 +145,7 @@ class PrimeSieve(PrimeSieveBase):
         else:
             return 0 <= key < len(self._sieve)
 
-    def __getitem__(self, i: int | slice) -> bool | Self:
+    def __getitem__(self, i: int | slice):
         """
         If an integer is given, returns its primality as True if prime or False if composite.
         If a slice is given, returns a PrimeSieveSlice object, which contains the range of number given by the slice.
@@ -160,6 +167,12 @@ class PrimeSieve(PrimeSieveBase):
         """
         for number, is_prime in enumerate(self._sieve):
             yield number, is_prime == P
+
+    def prime_list(self) -> list[int]:
+        return list(i for i in range(self.n) if self._sieve[i] == P)
+
+    def composite_list(self) -> list[int]:
+        return list(i for i in range(self.n) if self._sieve[i] == C)
 
 
 class PrimeSieveSlice(PrimeSieveBase):
@@ -200,7 +213,7 @@ class PrimeSieveSlice(PrimeSieveBase):
         return self._sieve[self._slice].tobytes()
 
     def __bool__(self):
-        return bool(self._numbers) > 0
+        return bool(self._numbers)
 
     def __len__(self) -> int:
         return len(self._numbers)
@@ -211,7 +224,7 @@ class PrimeSieveSlice(PrimeSieveBase):
         else:
             return key in self._numbers
 
-    def __getitem__(self, i: int | slice) -> bool | Self:
+    def __getitem__(self, i: int | slice):
         """
         If an integer is given, returns its prime as True if prime or False if composite.
         If a slice is given, returns a PrimeSieveSlice object, which contains the range of number given by the slice.
@@ -241,3 +254,9 @@ class PrimeSieveSlice(PrimeSieveBase):
     @property
     def slice_(self) -> slice:
         return self._slice
+
+    def prime_list(self) -> list[int]:
+        return list(i for i in self._numbers if self._sieve[i] == P)
+
+    def composite_list(self) -> list[int]:
+        return list(i for i in self._numbers if self._sieve[i] == C)
