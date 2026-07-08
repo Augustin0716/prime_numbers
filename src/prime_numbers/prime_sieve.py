@@ -1,10 +1,10 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from array import array
 from collections.abc import Generator
 from itertools import repeat
 from numbers import Real
 from math import isqrt
-from typing import runtime_checkable, Protocol, Self
+from typing import runtime_checkable, Protocol
 
 C = 67 # composite
 P = 80 # prime
@@ -100,16 +100,26 @@ class PrimeSieve(PrimeSieveBase):
     - return a slice (PrimeSieveSlice object) with the same properties
     """
     def __init__(self, n: int) -> None:
-        self.n = n
-        self._sieve = array('B', [P] * n)
-        if len(self._sieve) < 2:
+        # tests on n
+        if not isinstance(n, int):
+            raise TypeError("n must be an integer")
+
+        if n <= 0: # case for negative numbers and 0, the sieve is empty
+            self.n = 0
+            self._sieve = array('B')
+            self._n_primes = self._n_composites = 0
+            return
+
+        if n == 1: # the sieve only contains 0
+            self.n = 1
+            self._sieve = array('B', [C])
             self._n_primes = 0
-            if len(self._sieve) == 0:
-                self._n_composites = 0
-                return
-            self._sieve[0] = C
             self._n_composites = 1
             return
+
+        self.n = n # n is sure to be <= 2
+        self._sieve = array('B', [P] * n)
+        self._sieve[0] = self._sieve[1] = C # 0 and 1 are technically composite
 
         self._sift()
 
@@ -156,7 +166,7 @@ class PrimeSieve(PrimeSieveBase):
         return self._sieve.tobytes()
 
     def __bool__(self) -> bool:
-        return bool(self._sieve)
+        return bool(self.n)
 
     def __len__(self):
         return len(self._sieve)
