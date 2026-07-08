@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "prime_numbers"
 version = "0.0.1"
 authors = [
-    { name="Augustin", email="augustin.sathicq@gmail.com" }
+    { name="Augustin Sathicq", email="augustin.sathicq@gmail.com" }
 ]
 description = "A package about prime numbers"
 readme = "README.md"
