@@ -25,6 +25,28 @@ class PrimeSieveBase(ABC):
     _n_primes: int
     _n_composites: int
 
+    @abstractmethod
+    def __len__(self) -> int:
+        ...
+
+    @abstractmethod
+    def __getitem__(self, i: int | slice) -> int:
+        ...
+
+    @abstractmethod
+    def __str__(self):
+        ...
+
+    def __format__(self, format_spec: str) -> str:
+        if not format_spec:
+            return str(self)
+        elif not format_spec.isdigit():
+            raise ValueError(f"Unknown format code {format_spec!r} for object {type(self).__name__}.")
+        elif (limit := int(format_spec)) >= len(self):
+            return str(self)
+        else:
+            return f"{str(self[:limit])}..."
+
     def __lt__(self, other: object) -> bool:
         if isinstance(other, Real):
             return self._n_primes < float(other)
